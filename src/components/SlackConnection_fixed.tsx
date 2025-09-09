@@ -18,7 +18,7 @@ const SlackConnection = ({ isConnected, onConnectionChange }: SlackConnectionPro
     onConnectionChange(true);
   };
 
-  const handleConnectionError = (error: any) => {
+  const handleConnectionError = (error: unknown) => {
     console.error('Slack connection error:', error);
     setIsConnecting(false);
     setError('Failed to connect to Slack. Please try again.');

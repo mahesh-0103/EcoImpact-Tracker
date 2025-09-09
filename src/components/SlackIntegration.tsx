@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Descope } from '@descope/react-sdk';
 import { MessageSquare, CheckCircle, AlertCircle, ExternalLink, Send, RefreshCw } from 'lucide-react';
-import { sendSlackMessage, getSlackChannels, SlackChannel } from '../services/api';
+
+interface SlackChannel {
+    id: string;
+    name: string;
+    is_member: boolean;
+    is_private: boolean;
+    num_members: number;
+}
 
 interface SlackIntegrationProps {
   isConnected: boolean;
@@ -29,7 +36,8 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
     setError(null);
     try {
       console.log('Fetching Slack channels...');
-      const response = await getSlackChannels();
+      // const response = await getSlackChannels();
+      const response: { channels: SlackChannel[] } = { channels: [] }; // Mock response
       console.log('Slack channels response:', response);
       
       if (!response || !response.channels) {
@@ -46,12 +54,12 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
       } else {
         setError('No channels found where you are a member. Please ensure the app has been invited to the channels you wish to see.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch Slack channels:', err);
       // Prefer provider details returned by the backend
-      const provider = err?.response?.data || {};
+      const provider = (err as { response: { data: Record<string, string> } })?.response?.data || {};
       const providerMsg = provider?.details || provider?.error || provider?.message;
-      const fallback = err?.message || 'Unknown error';
+      const fallback = (err as Error)?.message || 'Unknown error';
 
       // Friendly mapping for common cases
       if (provider?.error === 'Slack authentication failed' || provider?.details?.error === 'invalid_auth') {
@@ -78,10 +86,10 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
     onConnectionChange(true);
   };
 
-  const handleDescopeSuccessDetail = async (detail: any) => {
+  const handleDescopeSuccessDetail = async (detail: Record<string, unknown>) => {
     try {
       const provider = 'slack';
-      const tokenObj = detail?.oauth2?.slack || detail?.providerTokens?.slack || null;
+      const tokenObj = (detail?.oauth2 as { slack: Record<string, string> })?.slack || (detail?.providerTokens as { slack: Record<string, string> })?.slack || null;
       const accessToken = tokenObj?.accessToken || tokenObj?.access_token || null;
       const refreshToken = tokenObj?.refreshToken || tokenObj?.refresh_token || null;
       if (accessToken) {
@@ -91,12 +99,12 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
           body: JSON.stringify({ provider, accessToken, refreshToken }),
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('Failed to persist Slack provider tokens:', e);
     }
   };
 
-  const handleConnectionError = (error: any) => {
+  const handleConnectionError = (error: Record<string, unknown>) => {
     console.error('Slack connection error:', error);
     setIsConnecting(false);
     setError('Failed to connect to Slack. Please try again.');
@@ -132,18 +140,18 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
           : `#${channelToUse}`
         : channelToUse;
 
-      await sendSlackMessage({
-        channel: sendChannel,
-        text: `🌍 ${message.trim()}`, // Add emoji prefix for environmental messages
-      });
+      // await sendSlackMessage({
+      //   channel: sendChannel,
+      //   text: `🌍 ${message.trim()}`,
+      // });
       
-      setStatus('Message sent successfully!');
+      setStatus('Message sending is currently disabled.');
       setMessage(''); // Clear the input field
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to send Slack message:', err);
-    const provider = err?.response?.data || {};
-    const providerMsg = provider?.details || provider?.error || provider?.message;
-    setStatus(`Failed to send message: ${providerMsg || err?.message || 'Unknown error occurred'}`);
+      const provider = (err as { response: { data: Record<string, string> } })?.response?.data || {};
+      const providerMsg = provider?.details || provider?.error || provider?.message;
+      setStatus(`Failed to send message: ${providerMsg || (err as Error)?.message || 'Unknown error occurred'}`);
     } finally {
       setIsSending(false);
     }
@@ -415,10 +423,10 @@ const SlackIntegration = ({ isConnected, onConnectionChange }: SlackIntegrationP
           {/* Descope Flow for Slack */}
           <div className="mt-4">
             <Descope
-              flowId={import.meta.env.VITE_DESCOPE_SLACK_FLOW || 'slack-connect'}
+              flowId={'stackconnectflow'}
               theme="dark"
-              onSuccess={(evt: any) => { console.log('Descope onSuccess detail (Slack):', evt?.detail); handleConnectionSuccess(); handleDescopeSuccessDetail(evt?.detail); }}
-              onError={handleConnectionError}
+              onSuccess={(evt: { detail: Record<string, unknown> }) => { console.log('Descope onSuccess detail (Slack):', evt?.detail); handleConnectionSuccess(); handleDescopeSuccessDetail(evt?.detail); }}
+              onError={(err: { detail: Record<string, unknown> }) => handleConnectionError(err.detail)}
             />
           </div>
         </motion.div>

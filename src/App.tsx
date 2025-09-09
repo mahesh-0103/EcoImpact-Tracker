@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useSession } from '@descope/react-sdk';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
@@ -11,35 +11,21 @@ import SlackPage from './pages/SlackPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthDebugger from './components/AuthDebugger';
 
+// A component to handle protected routes
+const ProtectedRoutes = () => (
+  <MainLayout>
+    <Outlet />
+  </MainLayout>
+);
+
 function App() {
   const { isAuthenticated, isSessionLoading } = useSession();
-  const profileIncomplete = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('ecoimpact-profile');
-      if (!stored) return true;
-      const p = JSON.parse(stored);
-      // Require name, location, and dob
-      return !p?.name || !p?.location || !p?.dob;
-    } catch {
-      return true;
-    }
-  }, [isAuthenticated]);
 
   // Debug logging
-  console.log('Auth Debug:', {
-    isAuthenticated,
-    isSessionLoading,
-    localStorage: typeof window !== 'undefined' ? Object.keys(localStorage).filter(key => key.includes('descope')) : 'N/A',
-    sessionStorage: typeof window !== 'undefined' ? Object.keys(sessionStorage).filter(key => key.includes('descope')) : 'N/A'
-  });
-
-  // Debug logging for authentication state
   useEffect(() => {
     console.log('Auth Debug:', {
       isAuthenticated,
       isSessionLoading,
-      localStorage: typeof window !== 'undefined' ? Object.keys(localStorage).filter(key => key.includes('descope')) : 'N/A',
-      sessionStorage: typeof window !== 'undefined' ? Object.keys(sessionStorage).filter(key => key.includes('descope')) : 'N/A'
     });
   }, [isAuthenticated, isSessionLoading]);
 
@@ -57,53 +43,26 @@ function App() {
         <AnimatePresence mode="wait">
           <Routes>
             {isAuthenticated ? (
-              // Protected routes - wrap in MainLayout
-              <Route path="/" element={
-                <MainLayout>
-                  <DashboardPage />
-                </MainLayout>
-              } />
+              // Protected routes
+              <Route element={<ProtectedRoutes />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/calculator" element={<CalculatorPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/slack" element={<SlackPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                {/* Redirect any other authenticated path to the dashboard */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
             ) : (
-              // Public routes - redirect to login
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            )}
-            
-            {/* Login route - only accessible when not authenticated */}
-            {!isAuthenticated && (
-              <Route path="/login" element={<LoginPage />} />
-            )}
-            
-            {/* Protected routes */}
-            {isAuthenticated && (
+              // Public routes
               <>
-                <Route path="/calculator" element={
-                  <MainLayout>
-                    <CalculatorPage />
-                  </MainLayout>
-                } />
-                <Route path="/calendar" element={
-                  <MainLayout>
-                    <CalendarPage />
-                  </MainLayout>
-                } />
-                <Route path="/slack" element={
-                  <MainLayout>
-                    <SlackPage />
-                  </MainLayout>
-                } />
-                <Route path="/profile" element={
-                  <MainLayout>
-                    <ProfilePage />
-                  </MainLayout>
-                } />
-                {/* Redirect /login to / when authenticated */}
-                <Route path="/login" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<LoginPage />} />
+                {/* Redirect any other non-authenticated path to login */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
               </>
             )}
           </Routes>
         </AnimatePresence>
-        
-        {/* Auth Debugger - always visible for debugging */}
         <AuthDebugger />
       </div>
     </Router>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, Quote } from 'lucide-react';
 
@@ -6,9 +6,7 @@ const GreetingMessage = () => {
   const [currentGreeting, setCurrentGreeting] = useState('');
   const [currentQuote, setCurrentQuote] = useState('');
 
-  // dynamic time-based greeting used instead of static list
-
-  const ecoQuotes = [
+  const ecoQuotes = useMemo(() => [
     "The Earth does not belong to us; we belong to the Earth. - Chief Seattle",
     "In every walk with nature, one receives far more than they seek. - John Muir",
     "The environment is where we all meet; where we all have a mutual interest. - Lady Bird Johnson",
@@ -19,7 +17,7 @@ const GreetingMessage = () => {
     "What we are doing to the forests of the world is but a mirror reflection of what we are doing to ourselves. - Mahatma Gandhi",
     "The Earth is what we all have in common. - Wendell Berry",
     "Conservation is a state of harmony between men and land. - Aldo Leopold"
-  ];
+  ], []);
 
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
@@ -35,7 +33,9 @@ const GreetingMessage = () => {
         const p = JSON.parse(stored);
         return p?.name || '';
       }
-    } catch {}
+    } catch (e) {
+      console.error('Failed to parse user profile from localStorage', e);
+    }
     return '';
   };
 
@@ -55,7 +55,7 @@ const GreetingMessage = () => {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [ecoQuotes]);
 
   return (
     <motion.div
@@ -66,7 +66,7 @@ const GreetingMessage = () => {
     >
       <div className="text-center">
         <motion.div
-          key={currentGreeting}
+          key={`greeting-${currentGreeting}`}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
@@ -79,7 +79,7 @@ const GreetingMessage = () => {
         </motion.div>
         
         <motion.div
-          key={currentQuote}
+          key={`quote-${currentQuote}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -98,4 +98,3 @@ const GreetingMessage = () => {
 };
 
 export default GreetingMessage;
-

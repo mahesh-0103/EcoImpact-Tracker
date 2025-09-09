@@ -9,7 +9,8 @@ const SmallEarth = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const size = 120;
+    // Use a fixed size for the canvas rendering to ensure consistency
+    const size = 160; 
     canvas.width = size;
     canvas.height = size;
     const radius = size * 0.4;
@@ -18,6 +19,8 @@ const SmallEarth = () => {
     let raf = 0;
 
     const draw = () => {
+      if (!ctx) return;
+
       ctx.clearRect(0, 0, size, size);
       ctx.save();
       ctx.translate(size / 2, size / 2);
@@ -38,49 +41,47 @@ const SmallEarth = () => {
       ctx.save();
       ctx.rotate(rotation);
       
-      // North America
-      ctx.fillStyle = '#228B22';
+      // Continents using ellipses
+      ctx.fillStyle = '#228B22'; // Dark green for landmasses
       ctx.beginPath();
-      ctx.ellipse(-radius * 0.4, -radius * 0.1, radius * 0.25, radius * 0.15, 0, 0, Math.PI * 2);
+      ctx.ellipse(-radius * 0.4, -radius * 0.1, radius * 0.25, radius * 0.15, 0.2, 0, Math.PI * 2); // N. America
       ctx.fill();
       
-      // Europe/Africa
-      ctx.fillStyle = '#32CD32';
+      ctx.fillStyle = '#32CD32'; // Lighter green
       ctx.beginPath();
-      ctx.ellipse(radius * 0.1, radius * 0.2, radius * 0.2, radius * 0.3, 0, 0, Math.PI * 2);
+      ctx.ellipse(radius * 0.1, radius * 0.2, radius * 0.2, radius * 0.3, -0.3, 0, Math.PI * 2); // Africa/Europe
       ctx.fill();
       
-      // Asia
-      ctx.fillStyle = '#228B22';
+      ctx.fillStyle = '#2E8B57'; // Sea green
       ctx.beginPath();
-      ctx.ellipse(radius * 0.3, -radius * 0.05, radius * 0.3, radius * 0.2, 0, 0, Math.PI * 2);
+      ctx.ellipse(radius * 0.5, -radius * 0.2, radius * 0.3, radius * 0.2, 0.5, 0, Math.PI * 2); // Asia
       ctx.fill();
       
-      // Australia
-      ctx.fillStyle = '#32CD32';
+      ctx.fillStyle = '#3CB371'; // Medium sea green
       ctx.beginPath();
-      ctx.ellipse(radius * 0.2, radius * 0.4, radius * 0.15, radius * 0.1, 0, 0, Math.PI * 2);
+      ctx.ellipse(radius * 0.2, radius * 0.45, radius * 0.15, radius * 0.1, -0.8, 0, Math.PI * 2); // Australia
       ctx.fill();
       
       ctx.restore();
 
       // Add atmospheric glow
-      const glowGradient = ctx.createRadialGradient(0, 0, radius * 0.8, 0, 0, radius * 1.3);
-      glowGradient.addColorStop(0, 'rgba(135, 206, 235, 0.1)');
+      const glowGradient = ctx.createRadialGradient(0, 0, radius * 0.9, 0, 0, radius * 1.4);
+      glowGradient.addColorStop(0, 'rgba(135, 206, 235, 0.15)');
+      glowGradient.addColorStop(0.7, 'rgba(135, 206, 235, 0.05)');
       glowGradient.addColorStop(1, 'rgba(135, 206, 235, 0)');
       ctx.fillStyle = glowGradient;
       ctx.beginPath();
-      ctx.arc(0, 0, radius * 1.3, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius * 1.4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Add subtle rim lighting
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      // Add subtle rim lighting for a 3D effect
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      rotation += 0.002; // Very slow rotation
+      rotation += 0.002; // Slow rotation for a calming effect
       raf = requestAnimationFrame(draw);
     };
 
@@ -89,13 +90,17 @@ const SmallEarth = () => {
   }, []);
 
   return (
-    <div className="relative">
-      <canvas ref={canvasRef} className="w-30 h-30 drop-shadow-lg" />
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/20 to-green-400/20 blur-sm animate-pulse"></div>
+    <div className="relative w-40 h-40 flex items-center justify-center">
+      <canvas 
+        ref={canvasRef} 
+        className="w-full h-full rounded-full drop-shadow-lg"
+      />
+      <div 
+        className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/10 to-green-400/10 blur-md animate-pulse"
+        style={{ pointerEvents: 'none' }} // Ensure canvas is interactive if needed
+      ></div>
     </div>
   );
 };
 
 export default SmallEarth;
-
-

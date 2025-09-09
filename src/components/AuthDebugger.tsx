@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useSession, useDescope } from '@descope/react-sdk';
-import { X, Trash2, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { X, Trash2, RefreshCw, Eye } from 'lucide-react';
 
 const AuthDebugger = () => {
   const { isAuthenticated, isSessionLoading, user } = useSession();
   const { logout } = useDescope();
   const [isVisible, setIsVisible] = useState(false);
-  const [authData, setAuthData] = useState<any>(null);
+  const [authData, setAuthData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const loadAuthData = () => {
-      const localStorageData: { [key: string]: any } = {};
-      const sessionStorageData: { [key: string]: any } = {};
+      const localStorageData: { [key: string]: unknown } = {};
+      const sessionStorageData: { [key: string]: unknown } = {};
 
       // Get all localStorage data
       for (let i = 0; i < localStorage.length; i++) {
@@ -193,6 +193,3 @@ const AuthDebugger = () => {
 };
 
 export default AuthDebugger;
-
-
-

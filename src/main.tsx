@@ -4,27 +4,23 @@ import { AuthProvider } from '@descope/react-sdk';
 import App from './App.tsx';
 import './index.css';
 
-// 1. Access the variable by its NAME, not its value.
-const projectId = import.meta.env.VITE_DESCOPE_PROJECT_ID || 'P2ZqBk1huFYr3mz4I8Zx4nYd9N3j';
+const projectId = import.meta.env.VITE_DESCOPE_PROJECT_ID;
 
-// 2. Log if using default project ID
-if (!import.meta.env.VITE_DESCOPE_PROJECT_ID) {
-  console.warn('Using default Descope project ID. Please set VITE_DESCOPE_PROJECT_ID in your .env file');
+if (!projectId) {
+  console.error('FATAL: VITE_DESCOPE_PROJECT_ID is not set in .env. The application cannot start.');
+  // You could render an error message to the user here
 }
 
-// 3. Log environment variables for debugging
-console.log('Environment Variables:', {
-  projectId: import.meta.env.VITE_DESCOPE_PROJECT_ID ? 'Set' : 'Using default',
-  flowId: import.meta.env.VITE_DESCOPE_FLOW_ID || 'Using default',
-  calendarApiId: import.meta.env.VITE_GOOGLE_CALENDAR_API_ID ? 'Set' : 'Not set',
-  calendarApiSecret: import.meta.env.VITE_GOOGLE_CALENDAR_API_SECRET ? 'Set' : 'Not set',
-  slackClientId: import.meta.env.VITE_SLACK_CLIENT_ID ? 'Set' : 'Not set',
-  slackClientSecret: import.meta.env.VITE_SLACK_CLIENT_SECRET ? 'Set' : 'Not set',
+// Log environment variables for debugging (client-side only)
+console.log('Environment Variables (Client-Side):', {
+  VITE_DESCOPE_PROJECT_ID: import.meta.env.VITE_DESCOPE_PROJECT_ID ? 'Set' : 'Not Set',
+  VITE_DESCOPE_FLOW_ID: import.meta.env.VITE_DESCOPE_FLOW_ID ? 'Set' : 'Not Set',
+  VITE_GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'Set' : 'Not Set',
+  VITE_SLACK_CLIENT_ID: import.meta.env.VITE_SLACK_CLIENT_ID ? 'Set' : 'Not Set',
 });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* 3. Pass the projectId VARIABLE you defined above as a prop. */}
     <AuthProvider projectId={projectId}>
       <App />
     </AuthProvider>

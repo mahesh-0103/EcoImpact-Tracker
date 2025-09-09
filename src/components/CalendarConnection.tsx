@@ -48,7 +48,7 @@ const CalendarConnection = ({ isConnected, onConnectionChange }: CalendarConnect
     onConnectionChange(true); // This will trigger the useEffect above
   };
 
-  const handleConnectionError = (error: any) => {
+  const handleConnectionError = (error: Record<string, unknown>) => {
     console.error('Calendar connection error:', error);
     setIsConnecting(false);
     setError('Failed to connect to Google Calendar. Please try again.');
@@ -232,7 +232,7 @@ const CalendarConnection = ({ isConnected, onConnectionChange }: CalendarConnect
           {/* Descope Flow: render so the SDK can open modal/redirect */}
           <div>
             <Descope
-              flowId={import.meta.env.VITE_DESCOPE_GOOGLE_FLOW || 'google-calendar-sso'}
+              flowId={import.meta.env.VITE_DESCOPE_GOOGLE_FLOW || 'google-calendar'}
               theme="dark"
               onSuccess={handleConnectionSuccess}
               onError={handleConnectionError}
@@ -245,4 +245,3 @@ const CalendarConnection = ({ isConnected, onConnectionChange }: CalendarConnect
 };
 
 export default CalendarConnection;
-

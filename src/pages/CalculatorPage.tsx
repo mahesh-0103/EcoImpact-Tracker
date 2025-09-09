@@ -4,6 +4,7 @@ import {
   Calculator, 
   Car, 
   Plane, 
+  Bike,
   Zap, 
   Home, 
   Trash2, 
@@ -21,6 +22,7 @@ const CalculatorPage = () => {
     // Travel
     carMiles: '',
     planeMiles: '',
+    bikeMiles: '',
     // Home Energy
     electricity: '',
     gas: '',
@@ -47,6 +49,7 @@ const CalculatorPage = () => {
   const emissionFactors = {
     car: 0.411, // kg CO2e per mile
     plane: 0.255, // kg CO2e per mile
+    bike: 0.02,
     electricity: 0.0004, // kg CO2e per kWh
     gas: 0.0053, // kg CO2e per cubic foot
     waste: 0.001, // kg CO2e per kg of waste
@@ -82,6 +85,7 @@ const CalculatorPage = () => {
     const fieldMap: { [key: string]: string } = {
       car: 'carMiles',
       plane: 'planeMiles',
+      bike: 'bikeMiles',
       electricity: 'electricity',
       gas: 'gas',
       waste: 'waste',
@@ -99,6 +103,7 @@ const CalculatorPage = () => {
     switch (type) {
       case 'car': return <Car className="w-4 h-4" />;
       case 'plane': return <Plane className="w-4 h-4" />;
+      case 'bike': return <Bike className="w-4 h-4" />;
       case 'electricity': return <Zap className="w-4 h-4" />;
       case 'gas': return <Home className="w-4 h-4" />;
       case 'waste': return <Trash2 className="w-4 h-4" />;
@@ -110,6 +115,7 @@ const CalculatorPage = () => {
     switch (type) {
       case 'car': return 'Car Travel';
       case 'plane': return 'Flight';
+      case 'bike': return 'Bike Travel';
       case 'electricity': return 'Electricity';
       case 'gas': return 'Natural Gas';
       case 'waste': return 'Waste';
@@ -198,6 +204,31 @@ const CalculatorPage = () => {
                   <button
                     onClick={() => handleLogActivity('plane', parseFloat(formData.planeMiles) || 0, 'miles')}
                     disabled={!formData.planeMiles || parseFloat(formData.planeMiles) <= 0}
+                    className="px-6 py-3 bg-terra-accent hover:bg-terra-accent/80 disabled:opacity-50 disabled:cursor-not-allowed text-terra-dark font-semibold rounded-lg transition-all duration-300 flex items-center space-x-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Log</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="bike-miles" className="block text-terra-primary font-medium mb-2">
+                  Bike Travel (miles)
+                </label>
+                <div className="flex space-x-2">
+                  <input
+                    id="bike-miles"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={formData.bikeMiles}
+                    onChange={(e) => handleInputChange('bikeMiles', e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-lg bg-terra-darker/50 border border-terra-panel-light/30 text-terra-primary placeholder-terra-secondary/50 focus:border-terra-accent focus:outline-none transition-colors duration-300"
+                    placeholder="Enter miles biked"
+                  />
+                  <button
+                    onClick={() => handleLogActivity('bike', parseFloat(formData.bikeMiles) || 0, 'miles')}
+                    disabled={!formData.bikeMiles || parseFloat(formData.bikeMiles) <= 0}
                     className="px-6 py-3 bg-terra-accent hover:bg-terra-accent/80 disabled:opacity-50 disabled:cursor-not-allowed text-terra-dark font-semibold rounded-lg transition-all duration-300 flex items-center space-x-2"
                   >
                     <Save className="w-4 h-4" />

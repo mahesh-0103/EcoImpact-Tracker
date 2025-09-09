@@ -1,160 +1,131 @@
-﻿import DescopeClient from '@descope/node-sdk';
+
+import DescopeClient from '@descope/node-sdk';
 import dotenv from 'dotenv';
 import tokenStore from '../services/tokenStore.js';
 
-dotenv.config();
+dotenv.config({ path: new URL('../../.env', import.meta.url).pathname });
 
-// Guarded initialization to avoid SDK throwing on missing env vars
+const projectId = process.env.DESCOPE_PROJECT_ID;
+const managementKey = process.env.DESCOPE_MANAGEMENT_KEY;
 let descope = null;
-if (process.env.DESCOPE_PROJECT_ID && process.env.DESCOPE_MANAGEMENT_KEY) {
+
+if (projectId) {
   try {
-    descope = DescopeClient({
-      projectId: String(process.env.DESCOPE_PROJECT_ID),
-      managementKey: String(process.env.DESCOPE_MANAGEMENT_KEY),
-    });
-  } catch (initErr) {
-    console.error('Failed to initialize Descope client:', initErr?.message || initErr);
-    descope = null;
+    descope = DescopeClient({ projectId, managementKey });
+    console.log(`[AUTH] Descope client initialized for Project ID: ${projectId}`);
+  } catch (err) {
+    console.error("[AUTH] FATAL: Failed to initialize Descope client:", err.message);
+    // Prevent the server from running with a misconfigured Descope client.
+    throw new Error(`Descope client initialization failed: ${err.message}`);
   }
 } else {
-  console.warn('DESCOPE_PROJECT_ID or DESCOPE_MANAGEMENT_KEY is not set — Descope auth is disabled. Set these in your environment or .env');
+  console.warn("[AUTH] WARNING: DESCOPE_PROJECT_ID is not set. API calls requiring authentication will fail.");
+  // Allow server to start, but auth-dependent routes will be non-functional.
 }
 
-// Descope authentication middleware
+/**
+ * Finds Google and Slack provider tokens within a decoded Descope JWT.
+ * @param {object} decodedToken - The decoded Descope session or access token.
+ * @returns {{google: object|null, slack: object|null}}
+ */
+function findProviderTokens(decodedToken) {
+  const found = { google: null, slack: null };
+  if (!decodedToken || typeof decodedToken !== 'object') return found;
+
+  const providersInAmr = decodedToken.amr?.filter(p => typeof p === 'object' && p.provider) || [];
+  for (const method of providersInAmr) {
+    const provider = method.provider.toLowerCase();
+    if (provider === 'google' && method.accessToken && !found.google) {
+      found.google = { accessToken: method.accessToken, refreshToken: method.refreshToken, expiresAt: method.expiration };
+    }
+    if (provider === 'slack' && method.accessToken && !found.slack) {
+      found.slack = { accessToken: method.accessToken, refreshToken: method.refreshToken, expiresAt: method.expiration };
+    }
+  }
+
+  const tenants = decodedToken.tenants ? Object.values(decodedToken.tenants) : [];
+  for (const tenant of tenants) {
+    const providersInTenant = tenant?.providers?.filter(p => p.provider) || [];
+    for (const providerInfo of providersInTenant) {
+      const provider = providerInfo.provider.toLowerCase();
+      if (provider === 'google' && providerInfo.accessToken && !found.google) {
+        found.google = providerInfo;
+      }
+      if (provider === 'slack' && providerInfo.accessToken && !found.slack) {
+        found.slack = providerInfo;
+      }
+    }
+  }
+  
+  return found;
+}
+
+/**
+ * Express middleware for validating Descope session tokens.
+ */
 export default async function descopeAuth(req, res, next) {
+  const header = req.headers.authorization;
+  
+  // Gracefully handle requests without an Authorization header.
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      details: 'Missing, malformed, or empty Authorization header. Please include a Bearer token.'
+    });
+  }
+
+  const sessionTokenStr = header.substring(7);
+  if (!sessionTokenStr) {
+    return res.status(401).json({ error: 'Unauthorized', details: 'Blank session token provided.' });
+  }
+
+  // This ensures the server doesn't crash if the Descope client wasn't initialized.
+  if (!descope) {
+    console.error('[AUTH] Middleware invoked, but Descope client is not available. Check project ID env var.');
+    return res.status(503).json({ error: 'Service Unavailable', details: 'Authentication service is not configured.' });
+  }
+
   try {
-    // Development helper: allow passing provider tokens directly via headers for testing
-    if (process.env.NODE_ENV === 'development') {
-      const devSlack = req.headers['x-slack-access-token'];
-      const devGoogle = req.headers['x-google-access-token'];
-      if (devSlack || devGoogle) {
-        // Attach a lightweight dev user so routes can read the header-provided tokens
-        req.user = {
-          id: `dev-${Date.now()}`,
-          email: 'dev@local',
-          name: 'Dev User',
-        };
-        // Skip Descope validation in this dev mode
-        return next();
-      }
+    const validationData = await descope.validateSession(sessionTokenStr, { includeToken: true });
+    const decodedToken = validationData?.token;
+    const userId = decodedToken?.sub;
+
+    if (!userId) {
+      console.warn("[AUTH] Token validation succeeded but no 'sub' (user ID) claim was found.");
+      return res.status(401).json({ error: 'Invalid Session', details: 'User identifier could not be determined from the token.' });
     }
 
-    const header = req.headers.authorization;
-    // Log presence of auth header (mask token for privacy)
-    if (!header || !header.startsWith('Bearer ')) {
-      console.warn('Descope auth: missing or malformed Authorization header');
-      return res.status(401).json({ error: 'Unauthorized', details: 'Missing Authorization header.' });
-    }
+    const { google, slack } = findProviderTokens(decodedToken);
+    
+    // Asynchronously save provider tokens without blocking the request flow.
+    if (google) await tokenStore.saveToken(userId, 'google', google);
+    if (slack) await tokenStore.saveToken(userId, 'slack', slack);
 
-    const token = header.replace('Bearer ', '').trim();
-    if (!token) {
-      console.warn('Descope auth: empty session token after Bearer prefix');
-      return res.status(401).json({ error: 'Unauthorized', details: 'Empty session token.' });
-    }
-    // Mask the token when logging to avoid leaking secrets
-    const masked = `${token.slice(0, 8)}...${token.slice(-6)}`;
-    console.log(`Descope auth: Received session token (masked): ${masked}`);
-
-    if (!descope) {
-      console.error('Descope client not configured (missing DESCOPE_PROJECT_ID / DESCOPE_MANAGEMENT_KEY)');
-      return res.status(500).json({ error: 'Server misconfiguration', details: 'Descope client not configured on the server. Set DESCOPE_PROJECT_ID and DESCOPE_MANAGEMENT_KEY.' });
-    }
-
-    let validation;
-    try {
-      validation = await descope.validateSession(token);
-    } catch (e) {
-      // Log detailed error to aid debugging (do not log full token)
-      console.error('Descope validateSession error:', e?.message || e);
-      if (e?.response) {
-        try {
-          console.error('Descope validateSession response body:', JSON.stringify(e.response));
-        } catch (dumpErr) {
-          console.error('Failed to stringify validateSession response');
-        }
-      }
-      return res.status(401).json({ error: 'Invalid session', details: 'Session validation failed.' });
-    }
-
-    const session = validation?.data ?? validation;
-    if (!session || !session.userId) return res.status(401).json({ error: 'Invalid session' });
-
-    // Persist provider tokens (if present)
-    try {
-      const userId = session.userId;
-      const claims = session.customClaims || {};
-
-      // In development, log claim keys to help debugging (mask values)
-      if (process.env.NODE_ENV === 'development') {
-        try {
-          const masked = JSON.parse(JSON.stringify(claims, (k, v) => {
-            if (typeof v === 'string' && v.length > 20) return `${v.slice(0, 8)}...${v.slice(-6)}`;
-            return v;
-          }));
-          console.log('Descope session customClaims (masked):', masked);
-        } catch (dumpErr) {
-          console.warn('Failed to stringify customClaims for debug');
-        }
-      }
-
-      // Heuristic extractor: search claim values for objects with accessToken/refreshToken
-      function findProviderTokens(obj) {
-        const found = { google: null, slack: null };
-        function walk(value) {
-          if (!value) return;
-          if (typeof value === 'string') {
-            // Google tokens often start with 'ya29.'; Slack tokens often start with 'xox'
-            if (/^ya29\./.test(value) && !found.google) found.google = { accessToken: value };
-            if (/^xox[bapo]-/.test(value) && !found.slack) found.slack = { accessToken: value };
-          } else if (typeof value === 'object') {
-            if (value.accessToken || value.refreshToken) {
-              // Try to guess provider from keys or token formats
-              if (!found.google && (/google/i.test(value.provider) || /^ya29\./.test(String(value.accessToken || '')))) {
-                found.google = { accessToken: value.accessToken, refreshToken: value.refreshToken, expiresAt: value.expiresAt, scope: value.scope };
-              }
-              if (!found.slack && (/slack/i.test(value.provider) || /^xox[bapo]-/.test(String(value.accessToken || '')))) {
-                found.slack = { accessToken: value.accessToken, refreshToken: value.refreshToken, scope: value.scope };
-              }
-            }
-            // Recurse
-            for (const k of Object.keys(value)) walk(value[k]);
-          }
-        }
-        walk(obj);
-        return found;
-      }
-
-      const extracted = findProviderTokens(claims);
-      if (extracted.google && extracted.google.accessToken) {
-        await tokenStore.saveToken(userId, 'google', {
-          accessToken: extracted.google.accessToken,
-          refreshToken: extracted.google.refreshToken,
-          expiresAt: extracted.google.expiresAt,
-          scope: extracted.google.scope,
-        });
-      }
-      if (extracted.slack && extracted.slack.accessToken) {
-        await tokenStore.saveToken(userId, 'slack', {
-          accessToken: extracted.slack.accessToken,
-          refreshToken: extracted.slack.refreshToken,
-          scope: extracted.slack.scope,
-        });
-      }
-    } catch (e) {
-      console.error('Failed to persist provider tokens from Descope session:', e?.message || e);
-    }
-
-    const meta = await tokenStore.getMetadata(session.userId);
+    // Attach a simplified, clean user object to the request.
     req.user = {
-      id: session.userId,
-      email: session.email || session.user?.email,
-      name: session.name || session.user?.name,
-      providerMeta: meta,
+      id: userId,
+      email: decodedToken.email,
+      name: decodedToken.name,
+      _rawDescopeToken: process.env.NODE_ENV === 'development' ? decodedToken : undefined
     };
 
     return next();
   } catch (err) {
-    console.error('Descope middleware unexpected error:', err);
-    return res.status(500).json({ error: 'Authentication error', details: 'Unexpected error validating session' });
+    console.error('[AUTH] Descope token validation failed:', err.message);
+    
+    // Specific check for Google Cloud KMS permission errors
+    if (err.message?.includes('cloudkms.cryptoKeyVersions.useToEncrypt')) {
+      console.error("[AUTH] >>> IAM PERMISSION ERROR: The backend service account is missing the 'Cloud KMS CryptoKey Encrypter/Decrypter' role. <<<");
+      return res.status(503).json({ 
+        error: 'Service Unavailable', 
+        details: 'A critical server-side permission error occurred with Google Cloud KMS. Check IAM roles.' 
+      });
+    }
+
+    // For other validation errors, return a clear 401 Unauthorized.
+    return res.status(401).json({ 
+      error: 'Unauthorized', 
+      details: `Session token is invalid or expired. Reason: ${err.message}`
+    });
   }
 }

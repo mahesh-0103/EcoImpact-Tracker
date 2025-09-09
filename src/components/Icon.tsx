@@ -31,7 +31,7 @@ interface IconProps {
   name: IconName;
   className?: string;
   size?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const Icon = ({ name, className = '', size = 24, ...props }: IconProps) => {
@@ -54,6 +54,3 @@ const Icon = ({ name, className = '', size = 24, ...props }: IconProps) => {
 };
 
 export default Icon;
-
-
-

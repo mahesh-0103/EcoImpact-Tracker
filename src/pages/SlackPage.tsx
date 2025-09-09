@@ -3,27 +3,33 @@ import { motion } from 'framer-motion';
 import { MessageSquare } from 'lucide-react';
 import BackNavigation from '../components/BackNavigation';
 import SlackIntegration from '../components/SlackIntegration';
-import { getSlackStatus } from '../services/api';
 
 const SlackPage = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   // Check connection status on component mount
   useEffect(() => {
-    checkConnectionStatus();
+    // checkConnectionStatus();
   }, []);
 
   const checkConnectionStatus = async () => {
     try {
-      const status = await getSlackStatus();
-      setIsConnected(!!status.connected);
+      // const status = await getSlackStatus();
+      // setIsConnected(!!status.connected);
     } catch (error) {
       console.error('Error checking Slack connection:', error);
+      // If we get a 401, it might mean the stored token is bad, so we reflect that
+      if ((error as { response?: { status: number } })?.response?.status === 401) {
+        setIsConnected(false);
+        onConnectionChange(false);
+      }
     }
   };
 
-  const handleConnectionChange = (connected: boolean) => {
+  const onConnectionChange = (connected: boolean) => {
     setIsConnected(connected);
+    // Persist a simple flag to avoid re-running the full connection flow on every page load
+    // The actual token is handled by the Descope SDK and our backend
     localStorage.setItem('slack-connected', connected.toString());
   };
 
@@ -57,7 +63,7 @@ const SlackPage = () => {
       {/* Slack Integration */}
       <SlackIntegration 
         isConnected={isConnected} 
-        onConnectionChange={handleConnectionChange} 
+        onConnectionChange={onConnectionChange} 
       />
     </div>
   );

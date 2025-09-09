@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "nodemon ./server/server.js",
+    "dev:server": "cd server && nodemon --env-file=../.env server.js",
     "dev:local": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
@@ -14,16 +14,17 @@
   },
   "dependencies": {
     "@descope/node-sdk": "latest",
-    "@descope/react-sdk": "latest",
+    "@descope/react-sdk": "2.19.3",
     "@slack/web-api": "latest",
     "axios": "latest",
     "concurrently": "latest",
-    "cors": "latest",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "latest",
     "framer-motion": "latest",
     "googleapis": "latest",
     "helmet": "latest",
+    "js-base64": "^3.7.8",
     "lowdb": "^3.0.0",
     "lucide-react": "^0.344.0",
     "morgan": "latest",
@@ -42,12 +43,13 @@
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
+    "express-list-endpoints": "6.0.0",
     "globals": "^15.9.0",
-    "nodemon": "^3.1.10",
+    "nodemon": "^1.15.1",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
-    "vite": "^5.4.2"
+    "vite": "^6.3.6"
   }
 }

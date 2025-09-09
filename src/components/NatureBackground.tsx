@@ -41,14 +41,14 @@ const NatureBackground = () => {
       const interval = setInterval(() => {
         setCurrentImageIndex((prevIndex) => (prevIndex + 1) % imageUrls.length);
       }, 6000);
-      (window as any).__nbgInterval = interval;
+      (window as unknown as { __nbgInterval: NodeJS.Timeout })['__nbgInterval'] = interval;
     });
 
     return () => {
       isMounted = false;
-      if ((window as any).__nbgInterval) clearInterval((window as any).__nbgInterval);
+      if ((window as unknown as { __nbgInterval: NodeJS.Timeout })['__nbgInterval']) clearInterval((window as unknown as { __nbgInterval: NodeJS.Timeout })['__nbgInterval']);
     };
-  }, [imageUrls.length]);
+  }, [imageUrls.length, imageUrls]);
 
   const particles = useMemo(() => {
     return Array.from({ length: 30 }).map((_, i) => ({

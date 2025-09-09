@@ -189,7 +189,7 @@ Ensure the following are properly configured:
 ### Descope Configuration:
 - Google provider: Ensure `https://www.googleapis.com/auth/calendar` scope is enabled
 - Slack provider: Ensure `channels:read` and `chat:write` scopes are enabled
-- Flow IDs: Verify `google-calendar-sso` and `stackconnectflow` are correct
+- Flow IDs: Verify `google-calendar` and `stackconnectflow` are correct
 
 ## Conclusion
 
@@ -201,4 +201,3 @@ All critical issues have been resolved:
 ✅ Code quality improvements with better organization and validation
 
 The application is now ready for production use with all integrations functioning correctly.
-

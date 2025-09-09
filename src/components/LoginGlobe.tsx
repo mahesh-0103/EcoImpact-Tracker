@@ -5,7 +5,7 @@ import Globe from 'react-globe.gl';
 
 const LoginGlobe = () => {
     // Slow rotation speed
-    const globeRef = React.useRef<any>();
+    const globeRef = React.useRef<{ controls: () => { autoRotate: boolean; autoRotateSpeed: number } }>();
 
     React.useEffect(() => {
         if (globeRef.current) {

@@ -12,7 +12,6 @@ import {
   CalendarEvent,
   SlackChannel
 } from '../services/api';
-import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { logout } = useDescope();
@@ -20,7 +19,6 @@ const Dashboard = () => {
   const [requireProfile, setRequireProfile] = useState(false);
   const [tempProfile, setTempProfile] = useState({ name: '', dob: '' });
   const [greeting, setGreeting] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     try {
@@ -71,7 +69,6 @@ const Dashboard = () => {
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [slackConnected, setSlackConnected] = useState(false);
   const [selectedSlackChannel, setSelectedSlackChannel] = useState('');
-  const [isLoadingIntegrations, setIsLoadingIntegrations] = useState(false);
 
   // Load integration status and data on component mount
   useEffect(() => {
@@ -79,39 +76,33 @@ const Dashboard = () => {
   }, []);
 
   const loadIntegrationStatus = async () => {
+    // Check calendar status
     try {
-      setIsLoadingIntegrations(true);
-      
-      // Check calendar status
-      try {
-        const calendarStatus = await getCalendarStatus();
-        setCalendarConnected(calendarStatus.connected);
-        if (calendarStatus.connected) {
-          const events = await getCalendarEvents();
-          setCalendarEvents(events.events);
-        }
-      } catch (error) {
-        console.error('Calendar status check failed:', error);
-        setCalendarConnected(false);
+      const calendarStatus = await getCalendarStatus();
+      setCalendarConnected(calendarStatus.connected);
+      if (calendarStatus.connected) {
+        const events = await getCalendarEvents();
+        setCalendarEvents(events.events);
       }
+    } catch (error) {
+      console.error('Calendar status check failed:', error);
+      setCalendarConnected(false);
+    }
 
-      // Check Slack status
-      try {
-        const slackStatus = await getSlackStatus();
-        setSlackConnected(slackStatus.connected);
-        if (slackStatus.connected) {
-          const channels = await getSlackChannels();
-          setSlackChannels(channels.channels);
-          if (channels.channels.length > 0) {
-            setSelectedSlackChannel(channels.channels[0].id);
-          }
+    // Check Slack status
+    try {
+      const slackStatus = await getSlackStatus();
+      setSlackConnected(slackStatus.connected);
+      if (slackStatus.connected) {
+        const channels = await getSlackChannels();
+        setSlackChannels(channels.channels);
+        if (channels.channels.length > 0) {
+          setSelectedSlackChannel(channels.channels[0].id);
         }
-      } catch (error) {
-        console.error('Slack status check failed:', error);
-        setSlackConnected(false);
       }
-    } finally {
-      setIsLoadingIntegrations(false);
+    } catch (error) {
+      console.error('Slack status check failed:', error);
+      setSlackConnected(false);
     }
   };
 
@@ -192,12 +183,6 @@ const Dashboard = () => {
           
           <div className="flex items-center space-x-4">
             <span className="text-terra-secondary">Welcome, {user?.name || user?.email}</span>
-            <button
-              onClick={clearAuthData}
-              className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-red-600/50 hover:bg-red-600/70 text-white transition-all duration-300"
-            >
-              <span>Clear Auth Data</span>
-            </button>
             <button
               onClick={() => logout()}
               className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-terra-panel/50 hover:bg-terra-panel-light/50 text-terra-secondary hover:text-terra-primary transition-all duration-300"

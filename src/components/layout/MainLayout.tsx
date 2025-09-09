@@ -99,7 +99,6 @@ const MainLayout = ({ children }: MainLayoutProps) => {
         <nav className="mt-8 px-4">
           <div className="space-y-2">
             {navigation.map((item) => {
-              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -111,7 +110,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                       : 'text-terra-secondary hover:text-terra-primary hover:bg-terra-panel/50'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.name}</span>
                 </Link>
               );
@@ -171,7 +170,9 @@ const MainLayout = ({ children }: MainLayoutProps) => {
                       const p = JSON.parse(stored);
                       return p?.name || user?.name || user?.email;
                     }
-                  } catch {}
+                  } catch {
+                    // Do nothing, just fallback to default
+                  }
                   return user?.name || user?.email;
                 })()}</span>
               </div>

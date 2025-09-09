@@ -3,63 +3,38 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import expressListEndpoints from 'express-list-endpoints';
+
+// Import route modules
 import carbonRoutes from './routes/carbon.js';
 import googleCalendarRoutes from './routes/google-calendar.js';
 import slackRoutes from './routes/slack.js';
-import mockIntegrations from './routes/mock-integrations.js';
+import authRoutes from './routes/auth.js'; // Import the new auth routes
 import descopeAuth from './middleware/descope-auth.js';
 import debugRoutes from './routes/debug.js';
-
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Security middleware
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.descope.com", "https://accounts.google.com", "https://www.googleapis.com"],
-      frameSrc: ["'self'", "https://accounts.google.com"],
-    },
-  },
-}));
+const isProduction = process.env.NODE_ENV === 'production';
 
-// CORS configuration
+// --- Final CORS Configuration ---
+// This is a more permissive setting to ensure functionality in complex proxy environments.
 app.use(cors({
-  // In production, restrict to configured FRONTEND_URL. In development, allow localhost dev servers
-  origin: (origin, callback) => {
-    if (process.env.NODE_ENV === 'production') {
-      const allowed = [process.env.FRONTEND_URL];
-      return callback(null, allowed.includes(origin));
-    }
-    // Allow undefined origin (e.g., curl), allow localhost on common dev ports
-    if (!origin) return callback(null, true);
-    try {
-      const url = new URL(origin);
-      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return callback(null, true);
-    } catch (e) {
-      // fallback: allow if matches common dev hosts
-      if (origin.startsWith('http://localhost')) return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: true, // Reflects the request origin
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  // include testing headers used to pass provider tokens directly
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Slack-Access-Token', 'X-Google-Access-Token']
 }));
 
-// Logging
-app.use(morgan('combined'));
+// Security Middleware
+app.use(helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false, 
+}));
 
-// Body parsing
+// Standard Middleware
+app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -72,29 +47,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
-app.use('/api', carbonRoutes);
-
-// Protect calendar and slack routes with Descope authentication
+// --- ROUTE CONFIGURATION ---
+app.use('/api/auth', authRoutes); // Register the new auth routes
+app.use('/api/carbon', carbonRoutes);
 app.use('/api/calendar', descopeAuth, googleCalendarRoutes);
 app.use('/api/slack', descopeAuth, slackRoutes);
 
-// Dev-only debug routes
-app.use('/api/debug', debugRoutes);
-
-// Mock integration routes for testing (temporary)
-app.use('/api', mockIntegrations);
+if (!isProduction) {
+    app.use('/api/debug', debugRoutes);
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    message: isProduction ? 'Something went wrong' : err.message,
+    stack: isProduction ? undefined : err.stack,
   });
 });
 
-// 404 handler (Correct)
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not found',
@@ -102,11 +75,39 @@ app.use((req, res) => {
   });
 });
 
+
+function getEndpointList(mainApp) {
+  const tempRouter = express.Router();
+  
+  tempRouter.use('/api/auth', authRoutes);
+  tempRouter.use('/api/carbon', carbonRoutes);
+  tempRouter.use('/api/calendar', googleCalendarRoutes); 
+  tempRouter.use('/api/slack', slackRoutes);
+  if (process.env.NODE_ENV !== 'production') {
+    tempRouter.use('/api/debug', debugRoutes);
+  }
+  tempRouter.get('/health', (req, res) => res.json({ status: 'temp-healthy' }));
+
+  return expressListEndpoints(tempRouter);
+}
+
 // Start server
 app.listen(PORT, () => {
-  console.log(`🌍 EcoImpact Tracker API running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`API Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  if (!isProduction) {
+    console.log('\n-- Registered API Endpoints --');
+    try {
+        const endpoints = getEndpointList(app);
+        if (endpoints.length > 0) {
+          console.table(endpoints.map(e => ({ path: e.path, methods: e.methods.join(', ') })));
+        } else {
+          console.log('No routes were registered.');
+        }
+    } catch (e) {
+        console.error('Could not list endpoints:', e.message)
+    }
+    console.log('-------------------------------------\n');
+  }
 });
 
 export default app;

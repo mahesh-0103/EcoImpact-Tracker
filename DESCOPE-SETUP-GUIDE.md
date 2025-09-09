@@ -12,7 +12,7 @@ You need to create a new Descope flow for Google Calendar integration:
 1. **Go to Descope Console** → Flows → Create New Flow
 2. **Flow Type**: OAuth
 3. **Provider**: Google
-4. **Flow ID**: `google-calendar-sso` (update this in the code)
+4. **Flow ID**: `google-calendar` (update this in the code)
 5. **Scopes Required**:
    - `https://www.googleapis.com/auth/calendar`
    - `https://www.googleapis.com/auth/userinfo.email`
@@ -45,7 +45,7 @@ Add these to your `.env` file:
 
 ```env
 # Google OAuth Flow
-VITE_GOOGLE_CALENDAR_FLOW_ID=google-calendar-sso
+VITE_GOOGLE_CALENDAR_FLOW_ID=google-calendar
 
 # Slack OAuth Flow
 VITE_SLACK_OAUTH_FLOW_ID=slack-oauth
@@ -58,7 +58,7 @@ Update the flow IDs in the components:
 **GoogleCalendarIntegration.tsx**:
 ```typescript
 <Descope
-  flowId="google-calendar-sso" // Update this
+  flowId="google-calendar" // Update this
   theme="dark"
   onSuccess={handleConnectionSuccess}
   onError={handleConnectionError}
@@ -112,13 +112,5 @@ If you want to test the application without setting up OAuth flows, you can use 
 3. Verify Descope flow configuration
 4. Test OAuth flows in Descope console first
 
-## Current Status
-
-- ✅ 3D Globe: Working with Three.js
-- ❌ Google Calendar: Needs Descope OAuth flow setup
-- ❌ Slack: Needs Descope OAuth flow setup
-- ✅ Error Handling: Improved with better messages
-- ✅ Mock Implementation: Available for testing
 
 The application is functional but requires proper Descope OAuth configuration to enable the integrations.
-
