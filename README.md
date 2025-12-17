@@ -82,5 +82,4 @@ DESCOPE_SIGNING_KEY=your-signing-key
 - Thanks to the hackathon organizers and the Descope team for their support.
 - Bolt AI for generating the initial site structure.
 
-## License
-MIT License - Feel free to use and modify!
+
