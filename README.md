@@ -1,7 +1,7 @@
 # EcoImpact-Tracker
 
 ## Overview
-EcoImpact Tracker is a web application designed to help users monitor and reduce their carbon footprint through habit tracking, Google Calendar reminders, and Slack updates. Built for the Hackathon conducted by Descope, this project leverages Descope for secure authentication and integration with Google Calendar and Slack via Outbound Apps, offering a visually stunning, user-friendly interface. The app includes innovative features like a Carbon Challenge, tenant-based access control, and analytics, aligning with real-world sustainability needs.
+EcoImpact Tracker is a web application designed to help users monitor and reduce their carbon footprint through habit tracking, Google Calendar reminders, and Slack updates. Built for the Global MCP Hackathon, this project leverages Descope for secure authentication and integration with Google Calendar and Slack via Outbound Apps, offering a visually stunning, user-friendly interface. The app includes innovative features like a Carbon Challenge, tenant-based access control, and analytics, aligning with real-world sustainability needs.
 
 ## Features
 - **Secure Authentication**: Uses Descope's "UserAuthFlow" with embedded Google Calendar and Slack connections.
